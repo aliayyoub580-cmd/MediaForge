@@ -22,6 +22,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
   const [activeTab, setActiveTab] = useState<Tab>('video');
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(data.originalUrl);
@@ -48,6 +49,41 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
     if (quality) params.set('quality', quality);
     if (kind === 'audio') params.set('kind', kind);
     return getApiUrl(`/download/file?${params.toString()}`);
+  };
+
+  const handleMediaDownload = async (quality?: string, kind: 'video' | 'audio' = 'video') => {
+    const key = `${kind}-${quality || 'best'}`;
+    setDownloading(key);
+
+    try {
+      const response = await fetch(getDownloadUrl(quality, kind));
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+        throw new Error(payload?.error?.message || 'The server could not prepare this download. Please try again.');
+      }
+
+      const blob = await response.blob();
+      if (!blob.size || blob.type.includes('application/json')) {
+        throw new Error('The server did not return a media file. Please try again.');
+      }
+
+      const disposition = response.headers.get('content-disposition') || '';
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1]
+        || `${data.title || 'media'}.${kind === 'audio' ? 'm4a' : 'mp4'}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      toast.success('Download started');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Download failed. Please try again.');
+    } finally {
+      setDownloading(null);
+    }
   };
 
   const platformColors: Record<string, string> = {
@@ -158,12 +194,14 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
                       <p className="text-xs text-dark-400 uppercase">{fmt.format}{fmt.fileSize ? ` · ${formatFileSize(fmt.fileSize)}` : ''}</p>
                     </div>
                   </div>
-                  <a
-                    href={getDownloadUrl(fmt.quality)}
-                    download
+                  <Button
+                    size="sm"
+                    loading={downloading === `video-${fmt.quality}`}
+                    onClick={() => handleMediaDownload(fmt.quality)}
+                    icon={<Download className="w-3.5 h-3.5" />}
                   >
-                    <Button size="sm" icon={<Download className="w-3.5 h-3.5" />}>Download</Button>
-                  </a>
+                    Download
+                  </Button>
                 </div>
               ))}
 
@@ -178,9 +216,14 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
                       <p className="text-xs text-dark-400 uppercase">Best available audio</p>
                     </div>
                   </div>
-                  <a href={getDownloadUrl(undefined, 'audio')} download>
-                    <Button size="sm" icon={<Download className="w-3.5 h-3.5" />}>Download</Button>
-                  </a>
+                  <Button
+                    size="sm"
+                    loading={downloading === 'audio-best'}
+                    onClick={() => handleMediaDownload(undefined, 'audio')}
+                    icon={<Download className="w-3.5 h-3.5" />}
+                  >
+                    Download
+                  </Button>
                 </div>
               )}
 

@@ -4,6 +4,7 @@ import { processDownloadRequest, getDownloadHistory } from '../services/download
 import { generateQRCode } from '../services/qr.service';
 import { hashIp } from '../utils/hash';
 import { validate } from '../middleware/validate';
+import { createError } from '../middleware/errorHandler';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { mkdtemp, readdir, rm } from 'fs/promises';
@@ -85,7 +86,12 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     const localBinary = path.resolve(process.cwd(), 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
     const binary = process.env.YTDLP_PATH || (existsSync(localBinary) ? localBinary : 'yt-dlp');
     const localFfmpeg = path.resolve(process.cwd(), 'bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
-    const ffmpegBinary = process.env.FFMPEG_PATH || (existsSync(localFfmpeg) ? localFfmpeg : ffmpegStatic);
+    // The container image installs FFmpeg at /usr/bin/ffmpeg. Do not point
+    // yt-dlp to ffmpeg-static on Linux: that optional npm binary may not be
+    // present in a production install and prevents yt-dlp from finding the
+    // system FFmpeg. ffmpeg-static remains the Windows development fallback.
+    const ffmpegBinary = process.env.FFMPEG_PATH
+      || (existsSync(localFfmpeg) ? localFfmpeg : process.platform === 'win32' ? ffmpegStatic : null);
     tempDirectory = await mkdtemp(path.join(os.tmpdir(), 'mediaforge-'));
     const outputTemplate = path.join(tempDirectory, 'media.%(ext)s');
     const formatSelector = kind === 'audio'
@@ -125,7 +131,11 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     res.download(filePath, downloadedFile);
   } catch (err) {
     if (tempDirectory) rm(tempDirectory, { recursive: true, force: true }).catch(() => undefined);
-    next(err);
+    next(createError(
+      'The source video could not be downloaded in the selected format. Please try another quality or video.',
+      422,
+      'DOWNLOAD_FAILED'
+    ));
   }
 }
 

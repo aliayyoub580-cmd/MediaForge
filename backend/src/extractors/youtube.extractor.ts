@@ -26,8 +26,9 @@ export class YouTubeExtractor implements IExtractor {
         return { success: false, error: { type: 'deleted', message: 'Video not found or unavailable' } };
       }
 
-      const thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-      const thumbnailFallback = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      // maxresdefault.jpg is optional and returns 404 for many valid videos.
+      // hqdefault.jpg is the reliable public thumbnail variant.
+      const thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
       // Build format list — direct YouTube download links via yt-dlp style approach
       const formats = [
@@ -45,7 +46,7 @@ export class YouTubeExtractor implements IExtractor {
           title: oembed.title || 'YouTube Video',
           author: oembed.author_name || 'Unknown',
           thumbnail,
-          hdThumbnail: thumbnailFallback,
+          hdThumbnail: thumbnail,
           duration: undefined,
           formats,
           audioUrl: `https://www.youtube.com/watch?v=${videoId}`,
