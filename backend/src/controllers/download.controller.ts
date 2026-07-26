@@ -5,6 +5,7 @@ import { generateQRCode } from '../services/qr.service';
 import { hashIp } from '../utils/hash';
 import { validate } from '../middleware/validate';
 import { createError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { mkdtemp, readdir, rm } from 'fs/promises';
@@ -84,7 +85,9 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
           ? requestedHeight
           : 1080;
     const localBinary = path.resolve(process.cwd(), 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
-    const binary = process.env.YTDLP_PATH || (existsSync(localBinary) ? localBinary : 'yt-dlp');
+    const usePythonModule = !process.env.YTDLP_PATH && process.platform !== 'win32' && !existsSync(localBinary);
+    const binary = process.env.YTDLP_PATH || (existsSync(localBinary) ? localBinary : 'python3');
+    const binaryArgs = usePythonModule ? ['-m', 'yt_dlp'] : [];
     const localFfmpeg = path.resolve(process.cwd(), 'bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
     // The container image installs FFmpeg at /usr/bin/ffmpeg. Do not point
     // yt-dlp to ffmpeg-static on Linux: that optional npm binary may not be
@@ -106,7 +109,11 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
 
     await new Promise<void>((resolve, reject) => {
       const child = spawn(binary, [
+        ...binaryArgs,
         '--no-playlist', '--no-progress', '--no-warnings',
+        // YouTube uses JavaScript challenges for format URLs. Node is already
+        // present in the container image and is a supported yt-dlp runtime.
+        '--js-runtimes', 'node',
         '--format', formatSelector,
         ...ffmpegArgs,
         '--output', outputTemplate,
@@ -131,6 +138,7 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     res.download(filePath, downloadedFile);
   } catch (err) {
     if (tempDirectory) rm(tempDirectory, { recursive: true, force: true }).catch(() => undefined);
+    logger.error('Media download failed', err instanceof Error ? err.message : String(err));
     next(createError(
       'The source video could not be downloaded in the selected format. Please try another quality or video.',
       422,
