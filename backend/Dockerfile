@@ -1,6 +1,6 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache ffmpeg python3 py3-pip && pip3 install --no-cache-dir --break-system-packages --upgrade yt-dlp && python3 -m yt_dlp --version
+RUN apk add --no-cache ffmpeg python3 py3-pip && pip3 install --no-cache-dir --break-system-packages --upgrade "yt-dlp[default]" && python3 -m yt_dlp --version
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci
@@ -11,7 +11,7 @@ RUN npm run build
 FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache ffmpeg python3 py3-pip && pip3 install --no-cache-dir --break-system-packages --upgrade yt-dlp && python3 -m yt_dlp --version
+RUN apk add --no-cache ffmpeg python3 py3-pip && pip3 install --no-cache-dir --break-system-packages --upgrade "yt-dlp[default]" && python3 -m yt_dlp --version
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev
