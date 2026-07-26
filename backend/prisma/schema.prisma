@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DownloadHistory {
+  id           String   @id @default(cuid())
+  hashedIp     String
+  platform     String
+  originalUrl  String
+  title        String?
+  thumbnail    String?
+  author       String?
+  duration     Int?
+  quality      String?
+  format       String?
+  fileSize     BigInt?
+  downloadCount Int     @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([hashedIp])
+  @@index([platform])
+  @@index([createdAt])
+  @@map("download_history")
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_users")
+}
+
+model CachedMedia {
+  id          String   @id @default(cuid())
+  urlHash     String   @unique
+  platform    String
+  metadata    Json
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([urlHash])
+  @@index([expiresAt])
+  @@map("cached_media")
+}
+
+model SiteStats {
+  id              String   @id @default(cuid())
+  date            DateTime @default(now()) @db.Date
+  totalDownloads  Int      @default(0)
+  tiktokDownloads Int      @default(0)
+  youtubeDownloads Int     @default(0)
+  instagramDownloads Int   @default(0)
+  facebookDownloads Int    @default(0)
+
+  @@unique([date])
+  @@map("site_stats")
+}
