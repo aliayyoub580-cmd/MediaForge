@@ -8,7 +8,7 @@ import { createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
-import { mkdtemp, readdir, rm } from 'fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import ffmpegStatic from 'ffmpeg-static';
@@ -97,6 +97,14 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     const ffmpegBinary = process.env.FFMPEG_PATH
       || (existsSync(localFfmpeg) ? localFfmpeg : process.platform === 'win32' ? ffmpegStatic : null);
     tempDirectory = await mkdtemp(path.join(os.tmpdir(), 'mediaforge-'));
+    // Vercel IP ranges can be challenged by YouTube. A user-owned Netscape
+    // cookie export supplied through a Vercel secret lets yt-dlp authenticate
+    // without exposing the file to the browser or repository.
+    const cookies = process.env.YOUTUBE_COOKIES_BASE64
+      ? Buffer.from(process.env.YOUTUBE_COOKIES_BASE64, 'base64').toString('utf8')
+      : process.env.YOUTUBE_COOKIES;
+    const cookieFile = cookies ? path.join(tempDirectory, 'youtube-cookies.txt') : undefined;
+    if (cookieFile) await writeFile(cookieFile, cookies, { encoding: 'utf8', mode: 0o600 });
     const outputTemplate = path.join(tempDirectory, 'media.%(ext)s');
     const formatSelector = kind === 'audio'
       ? 'bestaudio[ext=m4a]/bestaudio'
@@ -115,6 +123,7 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
         // YouTube uses JavaScript challenges for format URLs. Node is already
         // present in the container image and is a supported yt-dlp runtime.
         '--js-runtimes', 'node',
+        ...(cookieFile ? ['--cookies', cookieFile] : []),
         ...extractorArgs,
         '--format', format,
         ...ffmpegArgs,
