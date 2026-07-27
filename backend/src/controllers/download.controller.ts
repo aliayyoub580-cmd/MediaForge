@@ -64,6 +64,7 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       return;
     }
     const hostname = parsedUrl.hostname.toLowerCase();
+    const isYouTube = /(^|\.)youtube\.com$/.test(hostname) || hostname === 'youtu.be';
     const isSupported = [
       'youtube.com', 'youtu.be',
       'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
@@ -107,14 +108,15 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
         ]
       : [];
 
-    await new Promise<void>((resolve, reject) => {
+    const runYtDlp = (format: string, extractorArgs: string[] = []) => new Promise<void>((resolve, reject) => {
       const child = spawn(binary, [
         ...binaryArgs,
         '--no-playlist', '--no-progress', '--no-warnings',
         // YouTube uses JavaScript challenges for format URLs. Node is already
         // present in the container image and is a supported yt-dlp runtime.
         '--js-runtimes', 'node',
-        '--format', formatSelector,
+        ...extractorArgs,
+        '--format', format,
         ...ffmpegArgs,
         '--output', outputTemplate,
         url,
@@ -124,6 +126,28 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       child.on('error', (error) => reject(error));
       child.on('close', (code) => code === 0 ? resolve() : reject(new Error(stderr || `yt-dlp exited with code ${code}`)));
     });
+
+    const youtubeExtractorArgs = isYouTube
+      ? [
+          '--extractor-args', 'youtube:player_client=mweb',
+          // The bgutil provider installed in the production image creates a
+          // per-video Proof-of-Origin token for the mweb client. Without it,
+          // YouTube often exposes only storyboard images from cloud IPs.
+          '--extractor-args', 'youtubepot-bgutilscript:server_home=/opt/bgutil/server',
+        ]
+      : [];
+
+    try {
+      await runYtDlp(formatSelector, youtubeExtractorArgs);
+    } catch (primaryError) {
+      if (!isYouTube || kind !== 'video') throw primaryError;
+
+      // Some public videos have an HLS-only fallback. Preserve the requested
+      // maximum height instead of silently returning a lower-quality file.
+      const hlsSelector = `best[protocol=m3u8_native][height<=${height}]/best[protocol=m3u8_native]/best[height<=${height}]`;
+      logger.warn('Primary YouTube format failed; retrying with web_safari HLS');
+      await runYtDlp(hlsSelector, ['--extractor-args', 'youtube:player_client=web_safari']);
+    }
     const files = await readdir(tempDirectory);
     const downloadedFile = files.find((file) => kind === 'audio'
       ? /\.(mp3|m4a|opus|webm)$/i.test(file)
