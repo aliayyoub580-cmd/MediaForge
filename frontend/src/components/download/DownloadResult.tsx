@@ -44,14 +44,14 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
     if (!qrCode) onRequestQR(data.originalUrl);
   };
 
-  const getDownloadUrl = (quality?: string, kind: 'video' | 'audio' = 'video') => {
+  const getDownloadUrl = (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video') => {
     const params = new URLSearchParams({ url: data.originalUrl });
     if (quality) params.set('quality', quality);
     if (kind === 'audio') params.set('kind', kind);
     return getApiUrl(`/download/file?${params.toString()}`);
   };
 
-  const handleMediaDownload = async (quality?: string, kind: 'video' | 'audio' = 'video') => {
+  const handleMediaDownload = async (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video') => {
     const key = `${kind}-${quality || 'best'}`;
     setDownloading(key);
 
@@ -69,7 +69,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
 
       const disposition = response.headers.get('content-disposition') || '';
       const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1]
-        || `${data.title || 'media'}.${kind === 'audio' ? 'm4a' : 'mp4'}`;
+        || `${data.title || 'media'}.${kind === 'audio' ? 'm4a' : kind === 'thumbnail' ? 'jpg' : 'mp4'}`;
       const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = objectUrl;
@@ -236,9 +236,14 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
                       <p className="text-xs text-dark-400 uppercase">JPG</p>
                     </div>
                   </div>
-                  <a href={data.hdThumbnail || data.thumbnail} target="_blank" rel="noopener noreferrer" download>
-                    <Button size="sm" icon={<Download className="w-3.5 h-3.5" />}>Download</Button>
-                  </a>
+                  <Button
+                    size="sm"
+                    loading={downloading === 'thumbnail-best'}
+                    onClick={() => handleMediaDownload(undefined, 'thumbnail')}
+                    icon={<Download className="w-3.5 h-3.5" />}
+                  >
+                    Download
+                  </Button>
                 </div>
               )}
             </motion.div>

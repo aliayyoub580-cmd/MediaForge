@@ -51,7 +51,9 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
   try {
     const url = typeof req.query.url === 'string' ? req.query.url : '';
     const requestedQuality = typeof req.query.quality === 'string' ? req.query.quality : undefined;
-    const kind = req.query.kind === 'audio' ? 'audio' : 'video';
+    const kind = req.query.kind === 'audio' || req.query.kind === 'thumbnail'
+      ? req.query.kind
+      : 'video';
     if (!url) {
       res.status(400).json({ success: false, error: { message: 'A valid supported video URL is required' } });
       return;
@@ -108,6 +110,8 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     const outputTemplate = path.join(tempDirectory, 'media.%(ext)s');
     const formatSelector = kind === 'audio'
       ? 'bestaudio[ext=m4a]/bestaudio'
+      : kind === 'thumbnail'
+        ? 'best'
       : `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]/b[height<=${height}][ext=mp4]/b[height<=${height}]`;
     const ffmpegArgs = kind === 'video'
       ? [
@@ -124,6 +128,7 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
         // present in the container image and is a supported yt-dlp runtime.
         '--js-runtimes', 'node',
         ...(cookieFile ? ['--cookies', cookieFile] : []),
+        ...(kind === 'thumbnail' ? ['--skip-download', '--write-thumbnail', '--convert-thumbnails', 'jpg'] : []),
         ...extractorArgs,
         '--format', format,
         ...ffmpegArgs,
@@ -159,6 +164,8 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     const files = await readdir(tempDirectory);
     const downloadedFile = files.find((file) => kind === 'audio'
       ? /\.(mp3|m4a|opus|webm)$/i.test(file)
+      : kind === 'thumbnail'
+        ? /\.(jpg|jpeg|png|webp)$/i.test(file)
       : /\.(mp4|mkv|webm)$/i.test(file));
     if (!downloadedFile) throw new Error('yt-dlp did not produce a video file');
 
