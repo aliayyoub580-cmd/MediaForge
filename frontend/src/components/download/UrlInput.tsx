@@ -39,7 +39,7 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
         {/* Glow effect */}
         <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-500 to-accent-500 rounded-2xl opacity-20 group-focus-within:opacity-60 blur transition-all duration-500" />
 
-        <div className="relative flex items-center bg-white dark:bg-dark-800 rounded-2xl border border-primary-200/40 dark:border-primary-700/30 shadow-card overflow-hidden">
+        <div className="relative flex flex-col sm:flex-row sm:items-center bg-white dark:bg-dark-800 rounded-2xl border border-primary-200/40 dark:border-primary-700/30 shadow-card overflow-hidden">
           <div className="flex-shrink-0 pl-4 text-primary-400 dark:text-primary-500">
             <Link2 className="w-5 h-5" />
           </div>
@@ -50,7 +50,7 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Paste YouTube, TikTok, Instagram or Facebook URL..."
-            className="flex-1 px-4 py-4 bg-transparent text-dark-900 dark:text-dark-100 placeholder-dark-400 dark:placeholder-dark-500 focus:outline-none text-sm sm:text-base"
+            className="min-w-0 w-full flex-1 px-4 py-4 bg-transparent text-dark-900 dark:text-dark-100 placeholder-dark-400 dark:placeholder-dark-500 focus:outline-none text-sm sm:text-base"
             disabled={isLoading}
             autoComplete="off"
             spellCheck={false}
@@ -69,7 +69,7 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
             </motion.button>
           )}
 
-          <div className="flex-shrink-0 p-2 pr-3 flex items-center gap-2">
+          <div className="w-full sm:w-auto flex-shrink-0 p-2 pt-0 sm:pt-2 sm:pr-3 flex items-center gap-2">
             {!url && (
               <button
                 type="button"
@@ -79,7 +79,7 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
                 Paste
               </button>
             )}
-            <Button type="submit" size="md" loading={isLoading} icon={<Sparkles className="w-4 h-4" />} className="whitespace-nowrap">
+            <Button type="submit" size="md" loading={isLoading} icon={<Sparkles className="w-4 h-4" />} className="w-full sm:w-auto whitespace-nowrap">
               {isLoading ? 'Processing...' : 'Download'}
             </Button>
           </div>

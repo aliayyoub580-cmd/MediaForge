@@ -17,12 +17,19 @@ interface DownloadResultProps {
 }
 
 type Tab = 'video' | 'audio' | 'thumbnail';
+type DownloadProgress = {
+  key: string;
+  status: 'preparing' | 'downloading';
+  loaded: number;
+  total: number | null;
+};
 
 export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadResultProps) {
   const [activeTab, setActiveTab] = useState<Tab>('video');
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(data.originalUrl);
@@ -54,6 +61,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
   const handleMediaDownload = async (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video') => {
     const key = `${kind}-${quality || 'best'}`;
     setDownloading(key);
+    setDownloadProgress({ key, status: 'preparing', loaded: 0, total: null });
 
     try {
       const response = await fetch(getDownloadUrl(quality, kind));
@@ -62,7 +70,34 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
         throw new Error(payload?.error?.message || 'The server could not prepare this download. Please try again.');
       }
 
-      const blob = await response.blob();
+      const totalHeader = response.headers.get('content-length');
+      const total = totalHeader && Number.isFinite(Number(totalHeader)) ? Number(totalHeader) : null;
+      let blob: Blob;
+
+      if (!response.body) {
+        blob = await response.blob();
+        setDownloadProgress({ key, status: 'downloading', loaded: blob.size, total: blob.size });
+      } else {
+        const reader = response.body.getReader();
+        const chunks: ArrayBuffer[] = [];
+        let loaded = 0;
+        setDownloadProgress({ key, status: 'downloading', loaded, total });
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            // Copy into a regular ArrayBuffer so it is accepted by Blob across
+            // the browser and TypeScript's stricter SharedArrayBuffer types.
+            const chunk = new Uint8Array(value.byteLength);
+            chunk.set(value);
+            chunks.push(chunk.buffer);
+            loaded += value.byteLength;
+            setDownloadProgress({ key, status: 'downloading', loaded, total });
+          }
+        }
+        blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' });
+      }
       if (!blob.size || blob.type.includes('application/json')) {
         throw new Error('The server did not return a media file. Please try again.');
       }
@@ -83,8 +118,18 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
       toast.error(error instanceof Error ? error.message : 'Download failed. Please try again.');
     } finally {
       setDownloading(null);
+      setDownloadProgress(null);
     }
   };
+
+  const progressPercent = downloadProgress?.total
+    ? Math.min(100, Math.round((downloadProgress.loaded / downloadProgress.total) * 100))
+    : 0;
+  const progressLabel = downloadProgress?.status === 'preparing'
+    ? 'Preparing your file on the server…'
+    : downloadProgress?.total
+      ? `Downloading ${formatFileSize(downloadProgress.loaded)} of ${formatFileSize(downloadProgress.total)} (${progressPercent}%)`
+      : `Downloading ${formatFileSize(downloadProgress?.loaded || 0)}…`;
 
   const platformColors: Record<string, string> = {
     youtube: 'bg-red-500/10 border-red-500/20',
@@ -248,6 +293,23 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
               )}
             </motion.div>
           </AnimatePresence>
+
+          {downloadProgress && (
+            <div className="mt-4 rounded-xl border border-primary-200/60 dark:border-primary-700/40 bg-primary-50/70 dark:bg-primary-900/15 p-3" aria-live="polite">
+              <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium text-primary-700 dark:text-primary-300">
+                <span>{progressLabel}</span>
+                {downloadProgress.status === 'downloading' && downloadProgress.total && <span>{progressPercent}%</span>}
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-primary-200/70 dark:bg-primary-950/60">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-primary-500 to-accent-500"
+                  initial={false}
+                  animate={downloadProgress.status === 'preparing' ? { width: ['15%', '75%', '15%'] } : { width: `${Math.max(progressPercent, 2)}%` }}
+                  transition={downloadProgress.status === 'preparing' ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
