@@ -24,21 +24,30 @@ export class InstagramExtractor implements IExtractor {
 
       let title = `Instagram ${shortcodeMatch[1] === 'reel' ? 'Reel' : 'Video'}`;
       let author = 'Instagram User';
-      let thumbnail = `https://www.instagram.com/p/${shortcode}/media/?size=l`;
+      let thumbnail = '';
 
       try {
-        const { data } = await axios.get(`https://www.instagram.com/p/${shortcode}/?__a=1&__d=dis`, {
-          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+        const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
+        const { data: embedHtml } = await axios.get(embedUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
           timeout: 8000,
         });
-        if (data?.graphql?.shortcode_media) {
-          const media = data.graphql.shortcode_media;
-          title = media.edge_media_to_caption?.edges?.[0]?.node?.text?.slice(0, 80) || title;
-          author = media.owner?.username || author;
-          thumbnail = media.display_url || thumbnail;
+        const match = embedHtml.match(/class="EmbeddedMediaImage"[^>]*src="([^"]+)"/i)
+          || embedHtml.match(/display_url":"([^"]+)"/i)
+          || embedHtml.match(/meta property="og:image" content="([^"]+)"/i);
+        if (match && match[1]) {
+          thumbnail = match[1].replace(/\\u0026/g, '&').replace(/&amp;/g, '&');
+        }
+        const titleMatch = embedHtml.match(/CaptionText[^>]*>([^<]+)</i) || embedHtml.match(/meta property="og:title" content="([^"]+)"/i);
+        if (titleMatch && titleMatch[1]) {
+          title = titleMatch[1].trim();
+        }
+        const authorMatch = embedHtml.match(/UsernameText[^>]*>([^<]+)</i);
+        if (authorMatch && authorMatch[1]) {
+          author = authorMatch[1].trim();
         }
       } catch {
-        // Fallback to generic metadata — Instagram blocks most scraping
+        // Fallback
       }
 
       const formats = [

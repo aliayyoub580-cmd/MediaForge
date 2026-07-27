@@ -11,9 +11,9 @@ export default function HomePage() {
     <>
       <Helmet>
         <title>MediaForge Pro — Universal Video & Audio Downloader</title>
-        <meta name="description" content="Download HD videos and audio from TikTok, YouTube, Instagram & Facebook. No watermarks, no signup, 100% free." />
+        <meta name="description" content="Download HD videos and audio from TikTok, Instagram & Facebook. No watermarks, no signup, 100% free." />
         <meta property="og:title" content="MediaForge Pro — Universal Video & Audio Downloader" />
-        <meta property="og:description" content="Download HD videos and audio from TikTok, YouTube, Instagram & Facebook for free." />
+        <meta property="og:description" content="Download HD videos and audio from TikTok, Instagram & Facebook for free." />
         <link rel="canonical" href="https://mediaforge.pro/" />
       </Helmet>
       <HeroSection />

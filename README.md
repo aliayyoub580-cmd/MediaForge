@@ -2,7 +2,7 @@
 
 **Professional Universal Video & Audio Downloader**
 
-Download HD videos and audio from TikTok, YouTube, Instagram, and Facebook. No watermarks, no signup, 100% free.
+Download HD videos and audio from TikTok, Instagram, and Facebook. No watermarks, no signup, 100% free.
 
 ---
 

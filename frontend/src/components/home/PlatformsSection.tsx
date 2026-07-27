@@ -23,7 +23,6 @@ const PLATFORM_COLORS: Record<string, { bg: string; border: string; text: string
 };
 
 const staticPlatforms: PlatformData[] = [
-  { id: 'youtube', name: 'YouTube', supported: ['Videos', 'Shorts'], outputs: ['Up to 1080p', 'Audio MP3', 'Thumbnail'] },
   { id: 'tiktok', name: 'TikTok', supported: ['Videos', 'Slideshows'], outputs: ['No watermark', 'Audio MP3', 'Thumbnail'] },
   { id: 'instagram', name: 'Instagram', supported: ['Reels', 'Videos'], outputs: ['HD video', 'Audio', 'Thumbnail'] },
   { id: 'facebook', name: 'Facebook', supported: ['Videos', 'Reels'], outputs: ['HD video', 'Audio', 'Thumbnail'] },
@@ -52,11 +51,11 @@ export function PlatformsSection() {
             Supported <span className="gradient-text">Platforms</span>
           </h2>
           <p className="text-dark-500 dark:text-dark-400 max-w-xl mx-auto">
-            Works seamlessly with all major social media platforms
+            Works seamlessly with popular social media platforms
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {items.map((platform: PlatformData, i: number) => {
             const colors = PLATFORM_COLORS[platform.id] || PLATFORM_COLORS['youtube'];
             return (

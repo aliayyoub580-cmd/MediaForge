@@ -9,9 +9,9 @@ export async function getAggregateStats() {
 
   const stats = {
     totalDownloads: 0,
-    platformBreakdown: { tiktok: 0, youtube: 0, instagram: 0, facebook: 0 },
+    platformBreakdown: { tiktok: 0, instagram: 0, facebook: 0 },
     recentDownloads: [] as unknown[],
-    supportedPlatforms: 4,
+    supportedPlatforms: 3,
     uptime: process.uptime(),
   };
 
@@ -21,7 +21,6 @@ export async function getAggregateStats() {
       prisma.siteStats.aggregate({
         _sum: {
           tiktokDownloads: true,
-          youtubeDownloads: true,
           instagramDownloads: true,
           facebookDownloads: true,
         },
@@ -36,7 +35,6 @@ export async function getAggregateStats() {
     stats.totalDownloads = totals._sum.totalDownloads || 0;
     stats.platformBreakdown = {
       tiktok: platformBreakdown._sum.tiktokDownloads || 0,
-      youtube: platformBreakdown._sum.youtubeDownloads || 0,
       instagram: platformBreakdown._sum.instagramDownloads || 0,
       facebook: platformBreakdown._sum.facebookDownloads || 0,
     };

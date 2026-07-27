@@ -58,7 +58,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg sm:text-xl text-dark-500 dark:text-dark-400 max-w-2xl mx-auto mb-8 text-balance"
           >
-            Download HD videos and audio from TikTok, YouTube, Instagram & Facebook.
+            Download HD videos and audio from TikTok, Instagram & Facebook.
             No watermarks. No signup. Completely free.
           </motion.p>
 
@@ -74,7 +74,7 @@ export function HeroSection() {
               <span>2M+ users</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-dark-300 dark:bg-dark-600" />
-            <span>4 platforms</span>
+            <span>3 platforms</span>
             <div className="w-1 h-1 rounded-full bg-dark-300 dark:bg-dark-600" />
             <span>100% free</span>
           </motion.div>

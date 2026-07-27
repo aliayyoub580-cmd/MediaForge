@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link2, X, Sparkles } from 'lucide-react';
+import { AlertCircle, ArrowRight, Link2, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface UrlInputProps {
@@ -10,18 +10,28 @@ interface UrlInputProps {
 
 export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
   const [url, setUrl] = useState('');
+  const [youtubeNotice, setYoutubeNotice] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(url);
+  const submitUrl = (value: string) => {
+    if (isYouTubeUrl(value)) {
+      setYoutubeNotice(true);
+      return;
+    }
+    setYoutubeNotice(false);
+    onSubmit(value);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    submitUrl(url);
   };
 
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       setUrl(text);
-      setTimeout(() => onSubmit(text), 100);
+      submitUrl(text);
     } catch {
       inputRef.current?.focus();
     }
@@ -30,65 +40,67 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
   return (
     <motion.form
       onSubmit={handleSubmit}
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.3 }}
-      className="w-full max-w-3xl mx-auto"
+      transition={{ duration: 0.35, delay: 0.2 }}
+      className="mx-auto w-full max-w-3xl"
     >
-      <div className="relative group">
-        {/* Glow effect */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-500 to-accent-500 rounded-2xl opacity-20 group-focus-within:opacity-60 blur transition-all duration-500" />
-
-        <div className="relative flex flex-col sm:flex-row sm:items-center bg-white dark:bg-dark-800 rounded-2xl border border-primary-200/40 dark:border-primary-700/30 shadow-card overflow-hidden">
-          <div className="flex-shrink-0 pl-4 text-primary-400 dark:text-primary-500">
-            <Link2 className="w-5 h-5" />
+      <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_16px_40px_rgba(15,23,42,0.08)] dark:border-dark-700 dark:bg-dark-800">
+        <div className="flex flex-col overflow-hidden rounded-xl sm:flex-row sm:items-center">
+          <div className="flex-shrink-0 pl-4 text-slate-400 dark:text-dark-500">
+            <Link2 className="h-5 w-5" />
           </div>
-
           <input
             ref={inputRef}
             type="url"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste YouTube, TikTok, Instagram or Facebook URL..."
-            className="min-w-0 w-full flex-1 px-4 py-4 bg-transparent text-dark-900 dark:text-dark-100 placeholder-dark-400 dark:placeholder-dark-500 focus:outline-none text-sm sm:text-base"
+            onChange={(event) => { setUrl(event.target.value); setYoutubeNotice(false); }}
+            placeholder="Paste a TikTok, Instagram, or Facebook link"
+            className="min-w-0 w-full flex-1 bg-transparent px-4 py-4 text-sm text-dark-900 outline-none placeholder:text-slate-400 sm:text-base dark:text-dark-100 dark:placeholder:text-dark-500"
             disabled={isLoading}
             autoComplete="off"
             spellCheck={false}
           />
-
           {url && (
-            <motion.button
+            <button
               type="button"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              onClick={() => setUrl('')}
-              className="flex-shrink-0 p-2 mr-1 rounded-lg text-dark-400 hover:text-dark-600 dark:text-dark-500 dark:hover:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700 transition-all"
+              onClick={() => { setUrl(''); setYoutubeNotice(false); }}
+              aria-label="Clear URL"
+              className="mr-1 rounded-lg p-2 text-dark-400 transition-colors hover:bg-slate-100 hover:text-dark-600 dark:text-dark-500 dark:hover:bg-dark-700 dark:hover:text-dark-300"
             >
-              <X className="w-4 h-4" />
-            </motion.button>
+              <X className="h-4 w-4" />
+            </button>
           )}
-
-          <div className="w-full sm:w-auto flex-shrink-0 p-2 pt-0 sm:pt-2 sm:pr-3 flex items-center gap-2">
+          <div className="flex w-full flex-shrink-0 items-center gap-2 p-2 pt-0 sm:w-auto sm:pt-2 sm:pr-3">
             {!url && (
-              <button
-                type="button"
-                onClick={handlePaste}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-primary-500 dark:text-primary-400 border border-primary-200/50 dark:border-primary-700/30 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all"
-              >
+              <button type="button" onClick={handlePaste} className="hidden rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 sm:flex dark:text-dark-300 dark:hover:bg-dark-700">
                 Paste
               </button>
             )}
-            <Button type="submit" size="md" loading={isLoading} icon={<Sparkles className="w-4 h-4" />} className="w-full sm:w-auto whitespace-nowrap">
-              {isLoading ? 'Processing...' : 'Download'}
+            <Button type="submit" size="md" loading={isLoading} icon={<ArrowRight className="h-4 w-4" />} className="w-full whitespace-nowrap sm:w-auto">
+              {isLoading ? 'Checking…' : 'Continue'}
             </Button>
           </div>
         </div>
       </div>
 
-      <p className="text-center text-xs text-dark-400 dark:text-dark-500 mt-3">
-        Supports YouTube, TikTok, Instagram, and Facebook • 100% free
-      </p>
+      {youtubeNotice ? (
+        <div role="status" className="mt-3 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-none" />
+          <span><strong className="font-semibold">YouTube is not available yet.</strong> Please use a TikTok, Instagram, or Facebook link instead.</span>
+        </div>
+      ) : (
+        <p className="mt-3 text-center text-xs text-dark-400 dark:text-dark-500">TikTok, Instagram, and Facebook links supported</p>
+      )}
     </motion.form>
   );
+}
+
+function isYouTubeUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'youtu.be' || hostname.endsWith('.youtu.be') || hostname === 'youtube.com' || hostname.endsWith('.youtube.com');
+  } catch {
+    return /youtube\.com|youtu\.be/i.test(value);
+  }
 }

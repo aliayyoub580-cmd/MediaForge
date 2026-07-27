@@ -1,4 +1,4 @@
-export type Platform = 'youtube' | 'tiktok' | 'instagram' | 'facebook';
+export type Platform = 'tiktok' | 'instagram' | 'facebook';
 
 export interface MediaFormat {
   quality: string;
@@ -26,7 +26,7 @@ export interface MediaMetadata {
 }
 
 export interface ExtractorError {
-  type: 'invalid_url' | 'private' | 'age_restricted' | 'deleted' | 'unsupported' | 'extraction_failed' | 'rate_limited';
+  type: 'invalid_url' | 'private' | 'age_restricted' | 'deleted' | 'unsupported' | 'youtube_unavailable' | 'extraction_failed' | 'rate_limited';
   message: string;
 }
 

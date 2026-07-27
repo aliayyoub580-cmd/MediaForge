@@ -54,7 +54,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
   const getDownloadUrl = (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video') => {
     const params = new URLSearchParams({ url: data.originalUrl });
     if (quality) params.set('quality', quality);
-    if (kind === 'audio') params.set('kind', kind);
+    if (kind === 'audio' || kind === 'thumbnail') params.set('kind', kind);
     return getApiUrl(`/download/file?${params.toString()}`);
   };
 
@@ -87,8 +87,6 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
           const { done, value } = await reader.read();
           if (done) break;
           if (value) {
-            // Copy into a regular ArrayBuffer so it is accepted by Blob across
-            // the browser and TypeScript's stricter SharedArrayBuffer types.
             const chunk = new Uint8Array(value.byteLength);
             chunk.set(value);
             chunks.push(chunk.buffer);
@@ -132,7 +130,6 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
       : `Downloading ${formatFileSize(downloadProgress?.loaded || 0)}…`;
 
   const platformColors: Record<string, string> = {
-    youtube: 'bg-red-500/10 border-red-500/20',
     tiktok: 'bg-dark-900/10 dark:bg-dark-100/10 border-dark-700/20',
     instagram: 'bg-pink-500/10 border-pink-500/20',
     facebook: 'bg-blue-500/10 border-blue-500/20',
@@ -152,7 +149,18 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
             {/* Thumbnail */}
             <div className="relative flex-shrink-0 w-28 h-18 rounded-xl overflow-hidden bg-dark-200 dark:bg-dark-700 group">
               {data.thumbnail ? (
-                <img src={data.thumbnail} alt={data.title} className="w-full h-full object-cover" loading="lazy" />
+                <img
+                  src={data.thumbnail.startsWith('http') ? getApiUrl(`/download/proxy-image?url=${encodeURIComponent(data.thumbnail)}`) : data.thumbnail}
+                  alt={data.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    if (data.thumbnail && (e.target as HTMLImageElement).src !== data.thumbnail) {
+                      (e.target as HTMLImageElement).src = data.thumbnail;
+                    }
+                  }}
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <Play className="w-8 h-8 text-dark-400" />
@@ -272,13 +280,29 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
                 </div>
               )}
 
-              {activeTab === 'thumbnail' && data.thumbnail && (
+              {activeTab === 'thumbnail' && (
                 <div className="flex items-center justify-between p-3 rounded-xl bg-dark-50/60 dark:bg-dark-800/40 border border-dark-200/40 dark:border-dark-700/30">
                   <div className="flex items-center gap-3">
-                    <img src={data.thumbnail} alt="thumbnail" className="w-9 h-9 rounded-lg object-cover" />
+                    {data.thumbnail ? (
+                      <img
+                        src={data.thumbnail.startsWith('http') ? getApiUrl(`/download/proxy-image?url=${encodeURIComponent(data.thumbnail)}`) : data.thumbnail}
+                        alt="thumbnail"
+                        referrerPolicy="no-referrer"
+                        className="w-9 h-9 rounded-lg object-cover"
+                        onError={(e) => {
+                          if (data.thumbnail && (e.target as HTMLImageElement).src !== data.thumbnail) {
+                            (e.target as HTMLImageElement).src = data.thumbnail;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-primary-500/20 flex items-center justify-center">
+                        <Image className="w-4 h-4 text-primary-500" />
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-semibold text-dark-800 dark:text-dark-200">Thumbnail</p>
-                      <p className="text-xs text-dark-400 uppercase">JPG</p>
+                      <p className="text-xs text-dark-400 uppercase">JPG Image</p>
                     </div>
                   </div>
                   <Button

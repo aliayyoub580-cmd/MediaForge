@@ -32,9 +32,9 @@ export default function AdminDashboard() {
 
   const statCards = [
     { label: 'Total Downloads', value: formatNumber(stats?.totalDownloads || 0), icon: Download, color: 'text-primary-500' },
-    { label: 'YouTube', value: formatNumber(stats?.platformBreakdown?.youtube || 0), icon: () => <PlatformIcon platform="youtube" size={20} />, color: 'text-red-500' },
     { label: 'TikTok', value: formatNumber(stats?.platformBreakdown?.tiktok || 0), icon: () => <PlatformIcon platform="tiktok" size={20} />, color: 'text-dark-700 dark:text-dark-300' },
     { label: 'Instagram', value: formatNumber(stats?.platformBreakdown?.instagram || 0), icon: () => <PlatformIcon platform="instagram" size={20} />, color: 'text-pink-500' },
+    { label: 'Facebook', value: formatNumber(stats?.platformBreakdown?.facebook || 0), icon: () => <PlatformIcon platform="facebook" size={20} />, color: 'text-blue-500' },
   ];
 
   return (
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
               createdAt: string; quality?: string;
             }) => (
               <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-dark-50/60 dark:bg-dark-800/40">
-                {item.thumbnail && <img src={item.thumbnail} alt="" className="w-10 h-8 rounded-lg object-cover flex-shrink-0" />}
+                {item.thumbnail && <img src={item.thumbnail} alt="" referrerPolicy="no-referrer" className="w-10 h-8 rounded-lg object-cover flex-shrink-0" />}
                 <PlatformIcon platform={item.platform} size={16} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-dark-700 dark:text-dark-200 truncate">{item.title || 'Untitled'}</p>

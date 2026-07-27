@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { Download, Github, Twitter, Heart } from 'lucide-react';
 
 const platforms = [
-  { to: '/?platform=youtube', label: 'YouTube Downloader' },
   { to: '/?platform=tiktok', label: 'TikTok Downloader' },
   { to: '/?platform=instagram', label: 'Instagram Downloader' },
   { to: '/?platform=facebook', label: 'Facebook Downloader' },
@@ -28,7 +27,7 @@ export function Footer() {
               <span className="font-display font-bold text-xl gradient-text">MediaForge Pro</span>
             </Link>
             <p className="text-sm text-dark-500 dark:text-dark-400 max-w-xs leading-relaxed">
-              Professional Universal Video & Audio Downloader. Download HD videos from TikTok, YouTube, Instagram & Facebook instantly.
+              Professional Universal Video & Audio Downloader. Download HD videos from TikTok, Instagram & Facebook instantly.
             </p>
             <div className="flex items-center gap-3 mt-6">
               <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"

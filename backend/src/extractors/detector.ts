@@ -1,11 +1,9 @@
 import { IExtractor, ExtractorResult } from '../types';
-import { YouTubeExtractor } from './youtube.extractor';
 import { TikTokExtractor } from './tiktok.extractor';
 import { InstagramExtractor } from './instagram.extractor';
 import { FacebookExtractor } from './facebook.extractor';
 
 const extractors: IExtractor[] = [
-  new YouTubeExtractor(),
   new TikTokExtractor(),
   new InstagramExtractor(),
   new FacebookExtractor(),
@@ -16,11 +14,14 @@ export function detectPlatform(url: string): IExtractor | null {
 }
 
 export async function resolveMedia(url: string): Promise<ExtractorResult> {
+  if (isYouTubeUrl(url)) {
+    return { success: false, error: { type: 'youtube_unavailable', message: 'YouTube downloads are not available yet.' } };
+  }
   const extractor = detectPlatform(url);
   if (!extractor) {
     return {
       success: false,
-      error: { type: 'unsupported', message: 'This platform is not supported. We support YouTube, TikTok, Instagram, and Facebook.' },
+      error: { type: 'unsupported', message: 'This platform is not supported. We currently support TikTok, Instagram, and Facebook.' },
     };
   }
   return extractor.resolve(url);
@@ -28,14 +29,6 @@ export async function resolveMedia(url: string): Promise<ExtractorResult> {
 
 export function getSupportedPlatforms() {
   return [
-    {
-      id: 'youtube',
-      name: 'YouTube',
-      icon: 'youtube',
-      color: '#FF0000',
-      supported: ['Videos', 'Shorts'],
-      outputs: ['Video (up to 1080p)', 'Audio only (MP3)', 'Thumbnail'],
-    },
     {
       id: 'tiktok',
       name: 'TikTok',
@@ -61,4 +54,13 @@ export function getSupportedPlatforms() {
       outputs: ['HD video', 'Audio only', 'Thumbnail'],
     },
   ];
+}
+
+function isYouTubeUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'youtu.be' || hostname.endsWith('.youtu.be') || hostname === 'youtube.com' || hostname.endsWith('.youtube.com');
+  } catch {
+    return /youtube\.com|youtu\.be/i.test(value);
+  }
 }

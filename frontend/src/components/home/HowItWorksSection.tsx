@@ -3,7 +3,7 @@ import { useInView } from 'react-intersection-observer';
 import { Clipboard, Settings, Download } from 'lucide-react';
 
 const steps = [
-  { icon: Clipboard, step: '01', title: 'Paste Your URL', desc: 'Copy any video link from YouTube, TikTok, Instagram, or Facebook and paste it into the input box above.' },
+  { icon: Clipboard, step: '01', title: 'Paste Your URL', desc: 'Copy any video link from TikTok, Instagram, or Facebook and paste it into the input box above.' },
   { icon: Settings, step: '02', title: 'Select Format', desc: 'Choose your preferred quality (1080p, 720p, etc.) and format — video, audio-only, or thumbnail.' },
   { icon: Download, step: '03', title: 'Download Instantly', desc: 'Hit download and save your media directly to your device. No signup, no watermarks.' },
 ];

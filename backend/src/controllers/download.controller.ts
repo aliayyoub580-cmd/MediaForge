@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { body } from 'express-validator';
+import axios from 'axios';
 import { processDownloadRequest, getDownloadHistory } from '../services/download.service';
 import { generateQRCode } from '../services/qr.service';
 import { hashIp } from '../utils/hash';
@@ -8,7 +9,7 @@ import { createError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
-import { mkdtemp, readdir, rm, writeFile } from 'fs/promises';
+import { mkdtemp, readdir, rm } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import ffmpegStatic from 'ffmpeg-static';
@@ -27,7 +28,7 @@ export async function handleDownload(req: Request, res: Response, next: NextFunc
     if (!result.success) {
       const statusMap: Record<string, number> = {
         invalid_url: 400, unsupported: 400, private: 403,
-        age_restricted: 403, deleted: 404, rate_limited: 429, extraction_failed: 500,
+        age_restricted: 403, deleted: 404, rate_limited: 429, youtube_unavailable: 503, extraction_failed: 500,
       };
       const status = statusMap[result.error.type] || 500;
       res.status(status).json({ success: false, error: result.error });
@@ -41,9 +42,7 @@ export async function handleDownload(req: Request, res: Response, next: NextFunc
 }
 
 /**
- * Downloads with yt-dlp and returns a local attachment. The browser ignores the
- * `download` attribute for cross-origin YouTube watch pages, which is why the
- * old buttons opened the platform instead of saving a file.
+ * Downloads supported media with yt-dlp and returns a local attachment.
  */
 export async function streamMediaDownload(req: Request, res: Response, next: NextFunction) {
   let tempDirectory: string | undefined;
@@ -67,8 +66,11 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     }
     const hostname = parsedUrl.hostname.toLowerCase();
     const isYouTube = /(^|\.)youtube\.com$/.test(hostname) || hostname === 'youtu.be';
+    if (isYouTube) {
+      res.status(503).json({ success: false, error: { code: 'YOUTUBE_UNAVAILABLE', message: 'YouTube downloads are not available yet.' } });
+      return;
+    }
     const isSupported = [
-      'youtube.com', 'youtu.be',
       'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
       'instagram.com', 'facebook.com', 'fb.watch',
     ].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
@@ -99,14 +101,6 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     const ffmpegBinary = process.env.FFMPEG_PATH
       || (existsSync(localFfmpeg) ? localFfmpeg : process.platform === 'win32' ? ffmpegStatic : null);
     tempDirectory = await mkdtemp(path.join(os.tmpdir(), 'mediaforge-'));
-    // Vercel IP ranges can be challenged by YouTube. A user-owned Netscape
-    // cookie export supplied through a Vercel secret lets yt-dlp authenticate
-    // without exposing the file to the browser or repository.
-    const cookies = process.env.YOUTUBE_COOKIES_BASE64
-      ? Buffer.from(process.env.YOUTUBE_COOKIES_BASE64, 'base64').toString('utf8')
-      : process.env.YOUTUBE_COOKIES;
-    const cookieFile = cookies ? path.join(tempDirectory, 'youtube-cookies.txt') : undefined;
-    if (cookieFile && cookies) await writeFile(cookieFile, cookies, { encoding: 'utf8', mode: 0o600 });
     // yt-dlp sanitizes the title for the current filesystem. Keeping it in
     // the output template also makes Express send that title as the browser
     // attachment name instead of the generic "media.mp4".
@@ -116,23 +110,16 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       : kind === 'thumbnail'
         ? 'best'
       : `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]/b[height<=${height}][ext=mp4]/b[height<=${height}]`;
-    const ffmpegArgs = kind === 'video'
-      ? [
-          ...(ffmpegBinary ? ['--ffmpeg-location', path.dirname(ffmpegBinary)] : []),
-          '--merge-output-format', 'mp4',
-        ]
-      : [];
+    const ffmpegArgs = [
+      ...(ffmpegBinary ? ['--ffmpeg-location', path.dirname(ffmpegBinary)] : []),
+      ...(kind === 'video' ? ['--merge-output-format', 'mp4'] : []),
+    ];
 
-    const runYtDlp = (format: string, extractorArgs: string[] = []) => new Promise<void>((resolve, reject) => {
+    const runYtDlp = (format: string) => new Promise<void>((resolve, reject) => {
       const child = spawn(binary, [
         ...binaryArgs,
         '--no-playlist', '--no-progress', '--no-warnings',
-        // YouTube uses JavaScript challenges for format URLs. Node is already
-        // present in the container image and is a supported yt-dlp runtime.
-        '--js-runtimes', 'node',
-        ...(cookieFile ? ['--cookies', cookieFile] : []),
         ...(kind === 'thumbnail' ? ['--skip-download', '--write-thumbnail', '--convert-thumbnails', 'jpg'] : []),
-        ...extractorArgs,
         '--format', format,
         ...ffmpegArgs,
         '--output', outputTemplate,
@@ -145,25 +132,7 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       child.on('close', (code) => code === 0 ? resolve() : reject(new Error(output.slice(-4000) || `yt-dlp exited with code ${code}`)));
     });
 
-    const youtubeExtractorArgs = isYouTube
-      ? [
-          // This client provides standard adaptive MP4 streams without the
-          // cloud-IP bot challenge that blocks YouTube's normal web client.
-          '--extractor-args', 'youtube:player_client=web_embedded',
-        ]
-      : [];
-
-    try {
-      await runYtDlp(formatSelector, youtubeExtractorArgs);
-    } catch (primaryError) {
-      if (!isYouTube || kind !== 'video') throw primaryError;
-
-      // Some public videos have an HLS-only fallback. Preserve the requested
-      // maximum height instead of silently returning a lower-quality file.
-      const hlsSelector = `best[protocol=m3u8_native][height<=${height}]/best[protocol=m3u8_native]/best[height<=${height}]`;
-      logger.warn('Primary YouTube format failed; retrying with web_safari HLS');
-      await runYtDlp(hlsSelector, ['--extractor-args', 'youtube:player_client=web_safari']);
-    }
+    await runYtDlp(formatSelector);
     const files = await readdir(tempDirectory);
     const downloadedFile = files.find((file) => kind === 'audio'
       ? /\.(mp3|m4a|opus|webm)$/i.test(file)
@@ -210,5 +179,37 @@ export async function handleQRCode(req: Request, res: Response, next: NextFuncti
     res.json({ success: true, data: { qrCode: qr } });
   } catch (err) {
     next(err);
+  }
+}
+
+export async function handleProxyImage(req: Request, res: Response) {
+  try {
+    const imageUrl = typeof req.query.url === 'string' ? req.query.url : '';
+    if (!imageUrl) {
+      res.status(400).send('Image URL required');
+      return;
+    }
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      },
+      timeout: 10000,
+    });
+    const rawType = response.headers['content-type'];
+    const contentType = typeof rawType === 'string' ? rawType : 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(response.data));
+  } catch (err) {
+    logger.warn(`Image proxy failed for ${req.query.url}: ${err instanceof Error ? err.message : String(err)}`);
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" fill="none">
+      <rect width="640" height="360" fill="#0f172a"/>
+      <path d="M320 140 L360 210 L280 210 Z" fill="#6366f1"/>
+      <circle cx="320" cy="180" r="40" stroke="#818cf8" stroke-width="4" fill="none"/>
+    </svg>`);
   }
 }

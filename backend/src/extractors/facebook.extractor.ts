@@ -32,15 +32,29 @@ export class FacebookExtractor implements IExtractor {
       let thumbnail = '';
 
       try {
-        const { data } = await axios.get(
-          `https://graph.facebook.com/v18.0/oembed_video?url=${encodeURIComponent(resolvedUrl)}&format=json`,
-          { timeout: 8000 }
-        );
-        title = data.title || title;
-        author = data.author_name || author;
-        thumbnail = data.thumbnail_url || '';
+        const { data: pageHtml } = await axios.get(resolvedUrl, {
+          headers: {
+            'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+          timeout: 8000,
+        });
+
+        const imgMatch = pageHtml.match(/meta property="og:image" content="([^"]+)"/i)
+          || pageHtml.match(/meta name="twitter:image" content="([^"]+)"/i)
+          || pageHtml.match(/"preferred_thumbnail"[^}]*"image":\{"uri":"([^"]+)"/i)
+          || pageHtml.match(/"thumbnailUrl":"([^"]+)"/i);
+        if (imgMatch && imgMatch[1]) {
+          thumbnail = imgMatch[1].replace(/\\/g, '').replace(/&amp;/g, '&');
+        }
+
+        const titleMatch = pageHtml.match(/meta property="og:title" content="([^"]+)"/i)
+          || pageHtml.match(/<title>([^<]+)<\/title>/i);
+        if (titleMatch && titleMatch[1]) {
+          title = titleMatch[1].replace(/ \| Facebook$/i, '').trim();
+        }
       } catch {
-        // oEmbed may require access token — use fallback
+        // Fallback
       }
 
       const formats = [
