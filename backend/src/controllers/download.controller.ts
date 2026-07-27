@@ -107,7 +107,10 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       : process.env.YOUTUBE_COOKIES;
     const cookieFile = cookies ? path.join(tempDirectory, 'youtube-cookies.txt') : undefined;
     if (cookieFile && cookies) await writeFile(cookieFile, cookies, { encoding: 'utf8', mode: 0o600 });
-    const outputTemplate = path.join(tempDirectory, 'media.%(ext)s');
+    // yt-dlp sanitizes the title for the current filesystem. Keeping it in
+    // the output template also makes Express send that title as the browser
+    // attachment name instead of the generic "media.mp4".
+    const outputTemplate = path.join(tempDirectory, '%(title).200B.%(ext)s');
     const formatSelector = kind === 'audio'
       ? 'bestaudio[ext=m4a]/bestaudio'
       : kind === 'thumbnail'
