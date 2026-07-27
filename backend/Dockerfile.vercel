@@ -30,4 +30,4 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=provider-builder /opt/bgutil/server /opt/bgutil/server
 RUN mkdir -p logs
 EXPOSE 5000
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "node /opt/bgutil/server/build/main.js & exec node dist/index.js"]

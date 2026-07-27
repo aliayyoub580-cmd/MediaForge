@@ -130,10 +130,10 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     const youtubeExtractorArgs = isYouTube
       ? [
           '--extractor-args', 'youtube:player_client=mweb',
-          // The bgutil provider installed in the production image creates a
-          // per-video Proof-of-Origin token for the mweb client. Without it,
-          // YouTube often exposes only storyboard images from cloud IPs.
-          '--extractor-args', 'youtubepot-bgutilscript:server_home=/opt/bgutil/server',
+          // The production image runs the bgutil HTTP provider locally. It
+          // creates a per-video Proof-of-Origin token for mweb requests.
+          // Without it, YouTube often exposes only storyboard images from
+          // cloud IPs.
         ]
       : [];
 
