@@ -121,17 +121,18 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
         '--output', outputTemplate,
         url,
       ]);
-      let stderr = '';
-      child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+      let output = '';
+      child.stdout.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+      child.stderr.on('data', (chunk: Buffer) => { output += chunk.toString(); });
       child.on('error', (error) => reject(error));
-      child.on('close', (code) => code === 0 ? resolve() : reject(new Error(stderr || `yt-dlp exited with code ${code}`)));
+      child.on('close', (code) => code === 0 ? resolve() : reject(new Error(output.slice(-4000) || `yt-dlp exited with code ${code}`)));
     });
 
     const youtubeExtractorArgs = isYouTube
       ? [
           // Include token-protected formats so the provider below can attach
           // the per-video token instead of yt-dlp discarding them up front.
-          '--extractor-args', 'youtube:player_client=mweb;formats=missing_pot;pot_trace=true',
+          '--extractor-args', 'youtube:player_client=mweb;formats=missing_pot;fetch_pot=always;pot_trace=true',
           // The production image runs the bgutil HTTP provider locally. It
           // creates a per-video Proof-of-Origin token for mweb requests.
           // Without it, YouTube often exposes only storyboard images from
@@ -165,7 +166,7 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     res.download(filePath, downloadedFile);
   } catch (err) {
     if (tempDirectory) rm(tempDirectory, { recursive: true, force: true }).catch(() => undefined);
-    logger.error('Media download failed', err instanceof Error ? err.message : String(err));
+    logger.error(`Media download failed: ${err instanceof Error ? err.message : String(err)}`);
     next(createError(
       'The source video could not be downloaded in the selected format. Please try another quality or video.',
       422,
