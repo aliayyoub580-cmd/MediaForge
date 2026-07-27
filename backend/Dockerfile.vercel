@@ -1,11 +1,3 @@
-FROM node:22-alpine AS provider-builder
-WORKDIR /opt/bgutil
-# YouTube now requires a per-video Proof-of-Origin token for many cloud IP
-# requests. Build the official provider script once and copy it into runtime.
-RUN apk add --no-cache git python3 make g++ cairo-dev pango-dev jpeg-dev giflib-dev pixman-dev
-RUN git clone --depth 1 --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git . \
-  && cd server && npm ci && npx tsc
-
 FROM node:22-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache ffmpeg python3 py3-pip && pip3 install --no-cache-dir --break-system-packages --upgrade "yt-dlp[default]" && python3 -m yt_dlp --version
@@ -19,15 +11,14 @@ RUN npm run build
 FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache ffmpeg python3 py3-pip cairo pango jpeg giflib pixman \
-  && pip3 install --no-cache-dir --break-system-packages --upgrade "yt-dlp[default]" bgutil-ytdlp-pot-provider \
+RUN apk add --no-cache ffmpeg python3 py3-pip \
+  && pip3 install --no-cache-dir --break-system-packages --upgrade "yt-dlp[default]" \
   && python3 -m yt_dlp --version
 COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=provider-builder /opt/bgutil/server /opt/bgutil/server
 RUN mkdir -p logs
 EXPOSE 5000
-CMD ["sh", "-c", "node /opt/bgutil/server/build/main.js & exec node dist/index.js"]
+CMD ["node", "dist/index.js"]
