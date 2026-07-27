@@ -104,7 +104,7 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       ? Buffer.from(process.env.YOUTUBE_COOKIES_BASE64, 'base64').toString('utf8')
       : process.env.YOUTUBE_COOKIES;
     const cookieFile = cookies ? path.join(tempDirectory, 'youtube-cookies.txt') : undefined;
-    if (cookieFile) await writeFile(cookieFile, cookies, { encoding: 'utf8', mode: 0o600 });
+    if (cookieFile && cookies) await writeFile(cookieFile, cookies, { encoding: 'utf8', mode: 0o600 });
     const outputTemplate = path.join(tempDirectory, 'media.%(ext)s');
     const formatSelector = kind === 'audio'
       ? 'bestaudio[ext=m4a]/bestaudio'
