@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /api/
 Disallow: /admin/
+Disallow: /admin/*
+Disallow: /dashboard/
+Disallow: /*?*session=
 
-Sitemap: https://mediaforge.pro/sitemap.xml
+Sitemap: https://media-forge-sage.vercel.app/sitemap-index.xml
