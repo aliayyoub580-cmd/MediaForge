@@ -5,7 +5,12 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DOMAIN = 'https://media-forge-sage.vercel.app';
+const DOMAIN = process.env.VITE_SITE_URL
+  ? process.env.VITE_SITE_URL.replace(/\/$/, '')
+  : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'https://media-forge-sage.vercel.app';
+
 const TODAY = new Date().toISOString().split('T')[0];
 
 const PAGES = [
@@ -100,7 +105,7 @@ ${[...PAGES, ...blogUrls].map((p) => buildUrlXml(p.url, TODAY, p.changefreq, p.p
     fs.writeFileSync(path.join(targetDir, 'sitemap.xml'), combinedXml);
   });
 
-  console.log('✓ Sitemaps generated successfully:', PAGES.length + blogUrls.length, 'URLs indexed.');
+  console.log('✓ Sitemaps generated successfully:', PAGES.length + blogUrls.length, 'URLs indexed for domain:', DOMAIN);
 }
 
 generateSitemaps();
