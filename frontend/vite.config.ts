@@ -8,21 +8,26 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Keep this list in sync with files in public/. The old PNG references
-      // did not exist, so the deployed manifest requested them with 404s.
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'robots.txt', '*.xml'],
       manifest: {
         name: 'MediaForge Pro',
         short_name: 'MediaForge',
         description: 'Professional Universal Video & Audio Downloader',
-        theme_color: '#6366f1',
-        background_color: '#0f0f1a',
+        theme_color: '#042B35',
+        background_color: '#042B35',
         display: 'standalone',
         icons: [
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
         ]
       },
       workbox: {
+        // Crucial Fix: Exclude static XML sitemaps, robots.txt, and API routes from Service Worker SPA fallback
+        navigateFallbackDenylist: [
+          /^\/api/,
+          /\.xml$/,
+          /^\/robots\.txt$/,
+          /^\/google.*\.html$/
+        ],
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {

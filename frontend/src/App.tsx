@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Navbar } from './components/layout/Navbar';
@@ -29,6 +29,13 @@ const DMCAPage                  = lazy(() => import('./pages/DMCAPage'));
 const AdminLogin               = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminDashboard            = lazy(() => import('./pages/admin/AdminDashboard'));
 const NotFound                 = lazy(() => import('./pages/NotFoundPage'));
+
+function RawStaticRedirect() {
+  useEffect(() => {
+    window.location.reload();
+  }, []);
+  return null;
+}
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -92,6 +99,13 @@ export default function App() {
               <Route path="/privacy" element={<PageWrapper><PrivacyPage /></PageWrapper>} />
               <Route path="/terms" element={<PageWrapper><TermsPage /></PageWrapper>} />
               <Route path="/dmca" element={<PageWrapper><DMCAPage /></PageWrapper>} />
+
+              {/* Static file hard redirect routes */}
+              <Route path="/sitemap.xml" element={<RawStaticRedirect />} />
+              <Route path="/sitemap-index.xml" element={<RawStaticRedirect />} />
+              <Route path="/sitemap-pages.xml" element={<RawStaticRedirect />} />
+              <Route path="/sitemap-blog.xml" element={<RawStaticRedirect />} />
+              <Route path="/robots.txt" element={<RawStaticRedirect />} />
 
               {/* Admin Portal */}
               <Route path="/admin" element={<PageWrapper><AdminLogin /></PageWrapper>} />
