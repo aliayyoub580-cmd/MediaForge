@@ -6,4 +6,4 @@ Disallow: /admin/*
 Disallow: /dashboard/
 Disallow: /*?*session=
 
-Sitemap: https://media-forge-sage.vercel.app/sitemap-index.xml
+Sitemap: https://media-forge-sage.vercel.app/sitemap.xml

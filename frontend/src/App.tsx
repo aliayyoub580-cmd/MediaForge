@@ -32,7 +32,7 @@ const NotFound                 = lazy(() => import('./pages/NotFoundPage'));
 
 function RawStaticRedirect() {
   useEffect(() => {
-    window.location.reload();
+    window.location.href = window.location.pathname;
   }, []);
   return null;
 }
@@ -102,9 +102,6 @@ export default function App() {
 
               {/* Static file hard redirect routes */}
               <Route path="/sitemap.xml" element={<RawStaticRedirect />} />
-              <Route path="/sitemap-index.xml" element={<RawStaticRedirect />} />
-              <Route path="/sitemap-pages.xml" element={<RawStaticRedirect />} />
-              <Route path="/sitemap-blog.xml" element={<RawStaticRedirect />} />
               <Route path="/robots.txt" element={<RawStaticRedirect />} />
 
               {/* Admin Portal */}

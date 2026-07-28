@@ -7,8 +7,8 @@ const __dirname = path.dirname(__filename);
 
 const DOMAIN = process.env.VITE_SITE_URL
   ? process.env.VITE_SITE_URL.replace(/\/$/, '')
-  : process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
+  : process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}`
     : 'https://media-forge-sage.vercel.app';
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -60,52 +60,34 @@ function generateSitemaps() {
   const publicDir = path.resolve(__dirname, '../public');
   const distDir = path.resolve(__dirname, '../dist');
 
-  // Pages sitemap
-  const pagesXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${PAGES.map((p) => buildUrlXml(p.url, TODAY, p.changefreq, p.priority)).join('\n')}
-</urlset>`;
-
-  // Blog sitemap
   const blogUrls = [
     { url: '/blog', priority: '0.8', changefreq: 'daily' },
     ...BLOG_SLUGS.map((slug) => ({ url: `/blog/${slug}`, priority: '0.7', changefreq: 'weekly' })),
   ];
-  const blogXml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${blogUrls.map((p) => buildUrlXml(p.url, TODAY, p.changefreq, p.priority)).join('\n')}
-</urlset>`;
 
-  // Sitemap Index
-  const indexXml = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <sitemap>
-    <loc>${DOMAIN}/sitemap-pages.xml</loc>
-    <lastmod>${TODAY}</lastmod>
-  </sitemap>
-  <sitemap>
-    <loc>${DOMAIN}/sitemap-blog.xml</loc>
-    <lastmod>${TODAY}</lastmod>
-  </sitemap>
-</sitemapindex>`;
-
-  // Combined Single Sitemap
-  const combinedXml = `<?xml version="1.0" encoding="UTF-8"?>
+  // Single Sitemap containing all URLs
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${[...PAGES, ...blogUrls].map((p) => buildUrlXml(p.url, TODAY, p.changefreq, p.priority)).join('\n')}
 </urlset>`;
 
   const writeTargets = [publicDir, distDir];
+  const oldFiles = ['sitemap-pages.xml', 'sitemap-blog.xml', 'sitemap-index.xml'];
 
   writeTargets.forEach((targetDir) => {
     if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-    fs.writeFileSync(path.join(targetDir, 'sitemap-pages.xml'), pagesXml);
-    fs.writeFileSync(path.join(targetDir, 'sitemap-blog.xml'), blogXml);
-    fs.writeFileSync(path.join(targetDir, 'sitemap-index.xml'), indexXml);
-    fs.writeFileSync(path.join(targetDir, 'sitemap.xml'), combinedXml);
+    fs.writeFileSync(path.join(targetDir, 'sitemap.xml'), sitemapXml);
+
+    // Remove legacy sitemap files
+    oldFiles.forEach((file) => {
+      const filePath = path.join(targetDir, file);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    });
   });
 
-  console.log('✓ Sitemaps generated successfully:', PAGES.length + blogUrls.length, 'URLs indexed for domain:', DOMAIN);
+  console.log('✓ Single sitemap.xml generated successfully:', PAGES.length + blogUrls.length, 'URLs indexed for domain:', DOMAIN);
 }
 
 generateSitemaps();

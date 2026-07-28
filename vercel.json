@@ -22,7 +22,7 @@
       ]
     },
     {
-      "source": "/(.*)\\.xml",
+      "source": "/sitemap.xml",
       "headers": [
         {
           "key": "Content-Type",
