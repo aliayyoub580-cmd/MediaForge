@@ -26,7 +26,7 @@ export interface MediaMetadata {
 }
 
 export interface ExtractorError {
-  type: 'invalid_url' | 'private' | 'age_restricted' | 'deleted' | 'unsupported' | 'youtube_unavailable' | 'extraction_failed' | 'rate_limited';
+  type: 'invalid_url' | 'private' | 'age_restricted' | 'deleted' | 'unsupported' | 'extraction_failed' | 'rate_limited';
   message: string;
 }
 

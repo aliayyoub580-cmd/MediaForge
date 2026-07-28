@@ -26,7 +26,7 @@ export async function seedAdminUser() {
   const hashed = await bcrypt.hash(password, 12);
   await prisma.adminUser.create({
     data: {
-      email: process.env.ADMIN_EMAIL || 'admin@mediaforge.pro',
+      email: process.env.ADMIN_EMAIL || 'admin@media-forge-sage.vercel.app',
       password: hashed,
       name: 'Admin',
       role: 'admin',

@@ -1,59 +1,74 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Clipboard, Settings, Download } from 'lucide-react';
+import { Link2, Sliders, Download } from 'lucide-react';
 
 const steps = [
-  { icon: Clipboard, step: '01', title: 'Paste Your URL', desc: 'Copy any video link from TikTok, Instagram, or Facebook and paste it into the input box above.' },
-  { icon: Settings, step: '02', title: 'Select Format', desc: 'Choose your preferred quality (1080p, 720p, etc.) and format — video, audio-only, or thumbnail.' },
-  { icon: Download, step: '03', title: 'Download Instantly', desc: 'Hit download and save your media directly to your device. No signup, no watermarks.' },
+  {
+    icon: Link2,
+    step: '1',
+    title: 'Copy Link',
+    desc: 'Copy the video link from TikTok, Instagram Reels, or Facebook Watch.',
+  },
+  {
+    icon: Sliders,
+    step: '2',
+    title: 'Paste URL',
+    desc: 'Paste the link into the downloader search bar and click Download.',
+  },
+  {
+    icon: Download,
+    step: '3',
+    title: 'Save File',
+    desc: 'Choose your format (HD Video or MP3 Audio) and save directly to your device.',
+  },
 ];
 
 export function HowItWorksSection() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
-    <section ref={ref} className="py-24 section-padding">
+    <section ref={ref} className="py-20 section-padding relative">
       <div className="container-max">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.3 }}
+          className="text-center mb-12"
         >
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-dark-900 dark:text-white mb-4">
-            How It <span className="gradient-text">Works</span>
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-teal-50 mb-3">
+            How to Download in <span className="gradient-text">3 Simple Steps</span>
           </h2>
-          <p className="text-dark-500 dark:text-dark-400 max-w-xl mx-auto">
-            Three simple steps to download any media
+          <p className="text-slate-600 dark:text-teal-100/80 max-w-lg mx-auto text-sm sm:text-base">
+            Quick and effortless media extraction for everyone.
           </p>
         </motion.div>
 
-        <div className="relative">
-          {/* Connector line */}
-          <div className="hidden lg:block absolute top-14 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-primary-300 via-accent-300 to-primary-300 dark:from-primary-700 dark:via-accent-700 dark:to-primary-700 opacity-50" />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 relative">
-            {steps.map((step, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {steps.map((step, i) => {
+            const Icon = step.icon;
+            return (
               <motion.div
                 key={step.step}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: i * 0.15 }}
-                className="flex flex-col items-center text-center"
+                transition={{ duration: 0.3, delay: i * 0.08 }}
+                className="glass-card p-6 flex flex-col items-center text-center relative"
               >
-                <div className="relative mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shadow-glow-lg">
-                    <step.icon className="w-7 h-7 text-white" />
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 rounded-lg bg-white dark:bg-dark-800 border border-primary-200/50 dark:border-primary-700/30 flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-primary-500">{step.step}</span>
-                  </div>
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center mb-4">
+                  <Icon className="w-6 h-6" />
                 </div>
-                <h3 className="font-display font-bold text-lg text-dark-900 dark:text-dark-100 mb-2">{step.title}</h3>
-                <p className="text-sm text-dark-500 dark:text-dark-400 leading-relaxed max-w-xs">{step.desc}</p>
+                <span className="text-xs font-bold text-teal-600 dark:text-teal-300 uppercase tracking-wider mb-1 font-mono">
+                  Step {step.step}
+                </span>
+                <h3 className="font-display font-bold text-lg text-slate-900 dark:text-teal-50 mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-teal-100/80 leading-relaxed">
+                  {step.desc}
+                </p>
               </motion.div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
     </section>

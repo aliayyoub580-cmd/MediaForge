@@ -51,20 +51,21 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
     if (!qrCode) onRequestQR(data.originalUrl);
   };
 
-  const getDownloadUrl = (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video') => {
+  const getDownloadUrl = (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video', directUrl?: string) => {
     const params = new URLSearchParams({ url: data.originalUrl });
     if (quality) params.set('quality', quality);
     if (kind === 'audio' || kind === 'thumbnail') params.set('kind', kind);
+    if (directUrl) params.set('mediaUrl', directUrl);
     return getApiUrl(`/download/file?${params.toString()}`);
   };
 
-  const handleMediaDownload = async (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video') => {
+  const handleMediaDownload = async (quality?: string, kind: 'video' | 'audio' | 'thumbnail' = 'video', directUrl?: string) => {
     const key = `${kind}-${quality || 'best'}`;
     setDownloading(key);
     setDownloadProgress({ key, status: 'preparing', loaded: 0, total: null });
 
     try {
-      const response = await fetch(getDownloadUrl(quality, kind));
+      const response = await fetch(getDownloadUrl(quality, kind, directUrl));
       if (!response.ok) {
         const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
         throw new Error(payload?.error?.message || 'The server could not prepare this download. Please try again.');
@@ -140,7 +141,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
       initial={{ opacity: 0, y: 30, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, type: 'spring', stiffness: 120 }}
-      className="w-full max-w-3xl mx-auto"
+      className="w-full max-w-5xl mx-auto"
     >
       <div className="glass-card overflow-hidden">
         {/* Header */}
@@ -250,7 +251,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
                   <Button
                     size="sm"
                     loading={downloading === `video-${fmt.quality}`}
-                    onClick={() => handleMediaDownload(fmt.quality)}
+                    onClick={() => handleMediaDownload(fmt.quality, 'video', fmt.url)}
                     icon={<Download className="w-3.5 h-3.5" />}
                   >
                     Download
@@ -272,7 +273,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
                   <Button
                     size="sm"
                     loading={downloading === 'audio-best'}
-                    onClick={() => handleMediaDownload(undefined, 'audio')}
+                    onClick={() => handleMediaDownload(undefined, 'audio', data.audioUrl)}
                     icon={<Download className="w-3.5 h-3.5" />}
                   >
                     Download
@@ -308,7 +309,7 @@ export function DownloadResult({ data, qrCode, onRequestQR, onReset }: DownloadR
                   <Button
                     size="sm"
                     loading={downloading === 'thumbnail-best'}
-                    onClick={() => handleMediaDownload(undefined, 'thumbnail')}
+                    onClick={() => handleMediaDownload(undefined, 'thumbnail', data.thumbnail)}
                     icon={<Download className="w-3.5 h-3.5" />}
                   >
                     Download

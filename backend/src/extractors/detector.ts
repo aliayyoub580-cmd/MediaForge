@@ -14,9 +14,6 @@ export function detectPlatform(url: string): IExtractor | null {
 }
 
 export async function resolveMedia(url: string): Promise<ExtractorResult> {
-  if (isYouTubeUrl(url)) {
-    return { success: false, error: { type: 'youtube_unavailable', message: 'YouTube downloads are not available yet.' } };
-  }
   const extractor = detectPlatform(url);
   if (!extractor) {
     return {
@@ -33,7 +30,7 @@ export function getSupportedPlatforms() {
       id: 'tiktok',
       name: 'TikTok',
       icon: 'tiktok',
-      color: '#010101',
+      color: '#00F2FE',
       supported: ['Videos', 'Slideshows'],
       outputs: ['No-watermark video', 'Audio only (MP3)', 'Thumbnail'],
     },
@@ -42,7 +39,7 @@ export function getSupportedPlatforms() {
       name: 'Instagram',
       icon: 'instagram',
       color: '#E1306C',
-      supported: ['Reels', 'Videos'],
+      supported: ['Reels', 'Videos', 'Stories', 'Photos'],
       outputs: ['HD video', 'Audio only', 'Thumbnail'],
     },
     {
@@ -54,13 +51,4 @@ export function getSupportedPlatforms() {
       outputs: ['HD video', 'Audio only', 'Thumbnail'],
     },
   ];
-}
-
-function isYouTubeUrl(value: string) {
-  try {
-    const hostname = new URL(value).hostname.toLowerCase();
-    return hostname === 'youtu.be' || hostname.endsWith('.youtu.be') || hostname === 'youtube.com' || hostname.endsWith('.youtube.com');
-  } catch {
-    return /youtube\.com|youtu\.be/i.test(value);
-  }
 }

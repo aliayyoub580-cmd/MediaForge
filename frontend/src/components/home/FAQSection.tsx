@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, HelpCircle } from 'lucide-react';
 
 const faqs = [
   { q: 'Is MediaForge Pro completely free?', a: 'Yes, MediaForge Pro is 100% free. There are no hidden fees, subscriptions, or premium tiers. All features are available to everyone.' },
@@ -16,56 +16,75 @@ const faqs = [
 
 export function FAQSection() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.05 });
-  const [open, setOpen] = useState<number | null>(null);
+  const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section ref={ref} id="faq" className="py-24 section-padding">
-      <div className="container-max max-w-3xl">
+    <section ref={ref} id="faq" className="py-24 section-padding relative">
+      <div className="container-max">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          className="text-center mb-14"
+          transition={{ duration: 0.4 }}
+          className="text-center mb-16"
         >
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-dark-900 dark:text-white mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-dark-200 text-xs font-mono mb-4">
+            <HelpCircle className="w-3.5 h-3.5 text-cyan-500" />
+            <span>KNOWLEDGE BASE</span>
+          </div>
+          <h2 className="font-display text-3xl sm:text-5xl font-extrabold text-slate-900 dark:text-white mb-4">
             Frequently Asked <span className="gradient-text">Questions</span>
           </h2>
-          <p className="text-dark-500 dark:text-dark-400">Everything you need to know about MediaForge Pro</p>
+          <p className="text-slate-600 dark:text-dark-300 text-sm sm:text-base">
+            Everything you need to know about MediaForge Pro processing
+          </p>
         </motion.div>
 
-        <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 15 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: i * 0.05 }}
-              className="glass-card overflow-hidden"
-            >
-              <button
-                className="w-full flex items-center justify-between px-6 py-4 text-left gap-4"
-                onClick={() => setOpen(open === i ? null : i)}
+        <div className="space-y-3.5">
+          {faqs.map((faq, i) => {
+            const isOpen = open === i;
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 15 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: i * 0.04 }}
+                className={`studio-card overflow-hidden transition-all duration-200 ${
+                  isOpen ? 'border-cyan-500/40 shadow-glow-cyan' : ''
+                }`}
               >
-                <span className="font-medium text-dark-800 dark:text-dark-200 text-sm sm:text-base">{faq.q}</span>
-                <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-500">
-                  {open === i ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                </span>
-              </button>
-              <AnimatePresence>
-                {open === i && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.25 }}
-                  >
-                    <p className="px-6 pb-5 text-sm text-dark-500 dark:text-dark-400 leading-relaxed">{faq.a}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ))}
+                <button
+                  className="w-full flex items-center justify-between px-6 py-4 text-left gap-4"
+                  onClick={() => setOpen(isOpen ? null : i)}
+                >
+                  <span className="font-display font-semibold text-slate-900 dark:text-white text-sm sm:text-base">
+                    {faq.q}
+                  </span>
+                  <span className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                    isOpen ? 'bg-cyan-500 text-white' : 'bg-slate-100 dark:bg-dark-750 text-slate-500 dark:text-dark-300'
+                  }`}>
+                    {isOpen ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  </span>
+                </button>
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <p className="px-6 pb-5 text-xs sm:text-sm text-slate-600 dark:text-dark-300 leading-relaxed border-t border-slate-200/50 dark:border-white/5 pt-3">
+                        {faq.a}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
+

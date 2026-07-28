@@ -54,7 +54,6 @@ async function logDownloadHistory(hashedIp: string, data: MediaMetadata) {
 
   const platformField = `${data.platform}Downloads` as
     | 'tiktokDownloads'
-    | 'youtubeDownloads'
     | 'instagramDownloads'
     | 'facebookDownloads';
 

@@ -59,7 +59,6 @@ model SiteStats {
   date            DateTime @default(now()) @db.Date
   totalDownloads  Int      @default(0)
   tiktokDownloads Int      @default(0)
-  youtubeDownloads Int     @default(0)
   instagramDownloads Int   @default(0)
   facebookDownloads Int    @default(0)
 

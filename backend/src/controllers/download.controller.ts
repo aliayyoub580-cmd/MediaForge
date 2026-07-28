@@ -28,7 +28,7 @@ export async function handleDownload(req: Request, res: Response, next: NextFunc
     if (!result.success) {
       const statusMap: Record<string, number> = {
         invalid_url: 400, unsupported: 400, private: 403,
-        age_restricted: 403, deleted: 404, rate_limited: 429, youtube_unavailable: 503, extraction_failed: 500,
+        age_restricted: 403, deleted: 404, rate_limited: 429, extraction_failed: 500,
       };
       const status = statusMap[result.error.type] || 500;
       res.status(status).json({ success: false, error: result.error });
@@ -49,14 +49,17 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
 
   try {
     const url = typeof req.query.url === 'string' ? req.query.url : '';
+    const mediaUrl = typeof req.query.mediaUrl === 'string' ? req.query.mediaUrl : undefined;
     const requestedQuality = typeof req.query.quality === 'string' ? req.query.quality : undefined;
     const kind = req.query.kind === 'audio' || req.query.kind === 'thumbnail'
       ? req.query.kind
       : 'video';
+
     if (!url) {
       res.status(400).json({ success: false, error: { message: 'A valid supported video URL is required' } });
       return;
     }
+
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -64,18 +67,14 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       res.status(400).json({ success: false, error: { message: 'A valid supported video URL is required' } });
       return;
     }
+
     const hostname = parsedUrl.hostname.toLowerCase();
-    const isYouTube = /(^|\.)youtube\.com$/.test(hostname) || hostname === 'youtu.be';
-    if (isYouTube) {
-      res.status(503).json({ success: false, error: { code: 'YOUTUBE_UNAVAILABLE', message: 'YouTube downloads are not available yet.' } });
-      return;
-    }
     const isSupported = [
       'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
-      'instagram.com', 'facebook.com', 'fb.watch',
+      'instagram.com', 'instagr.am', 'facebook.com', 'fb.watch', 'fb.com',
     ].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
 
-    if (!isSupported) {
+    if (!isSupported && !mediaUrl) {
       res.status(400).json({ success: false, error: { message: 'A valid supported video URL is required' } });
       return;
     }
@@ -83,47 +82,48 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
     const requestedHeight = Number.parseInt(requestedQuality || '', 10);
     const qualityLabel = requestedQuality?.toUpperCase();
     const height = qualityLabel === 'HD'
-      ? 4320 // TikTok's generic "HD" option means the highest source quality.
+      ? 4320
       : qualityLabel === 'SD'
         ? 480
         : Number.isFinite(requestedHeight) && requestedHeight >= 144 && requestedHeight <= 4320
           ? requestedHeight
           : 1080;
+
     const localBinary = path.resolve(process.cwd(), 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
     const usePythonModule = !process.env.YTDLP_PATH && process.platform !== 'win32' && !existsSync(localBinary);
     const binary = process.env.YTDLP_PATH || (existsSync(localBinary) ? localBinary : 'python3');
     const binaryArgs = usePythonModule ? ['-m', 'yt_dlp'] : [];
     const localFfmpeg = path.resolve(process.cwd(), 'bin', process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
-    // The container image installs FFmpeg at /usr/bin/ffmpeg. Do not point
-    // yt-dlp to ffmpeg-static on Linux: that optional npm binary may not be
-    // present in a production install and prevents yt-dlp from finding the
-    // system FFmpeg. ffmpeg-static remains the Windows development fallback.
     const ffmpegBinary = process.env.FFMPEG_PATH
       || (existsSync(localFfmpeg) ? localFfmpeg : process.platform === 'win32' ? ffmpegStatic : null);
+
     tempDirectory = await mkdtemp(path.join(os.tmpdir(), 'mediaforge-'));
-    // yt-dlp sanitizes the title for the current filesystem. Keeping it in
-    // the output template also makes Express send that title as the browser
-    // attachment name instead of the generic "media.mp4".
     const outputTemplate = path.join(tempDirectory, '%(title).200B.%(ext)s');
+
+    // Universal format selector for TikTok/Instagram/Facebook progressive streams
     const formatSelector = kind === 'audio'
-      ? 'bestaudio[ext=m4a]/bestaudio'
+      ? 'bestaudio/best'
       : kind === 'thumbnail'
         ? 'best'
-      : `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]/b[height<=${height}][ext=mp4]/b[height<=${height}]`;
+        : `b[height<=${height}][ext=mp4]/b[height<=${height}]/best[ext=mp4]/best/b`;
+
     const ffmpegArgs = [
       ...(ffmpegBinary ? ['--ffmpeg-location', path.dirname(ffmpegBinary)] : []),
       ...(kind === 'video' ? ['--merge-output-format', 'mp4'] : []),
     ];
 
-    const runYtDlp = (format: string) => new Promise<void>((resolve, reject) => {
+    const runYtDlp = (format: string, targetUrl: string) => new Promise<void>((resolve, reject) => {
       const child = spawn(binary, [
         ...binaryArgs,
         '--no-playlist', '--no-progress', '--no-warnings',
+        '--no-check-certificates', '--geo-bypass',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        '--referer', targetUrl,
         ...(kind === 'thumbnail' ? ['--skip-download', '--write-thumbnail', '--convert-thumbnails', 'jpg'] : []),
         '--format', format,
         ...ffmpegArgs,
         '--output', outputTemplate,
-        url,
+        targetUrl,
       ]);
       let output = '';
       child.stdout.on('data', (chunk: Buffer) => { output += chunk.toString(); });
@@ -132,13 +132,42 @@ export async function streamMediaDownload(req: Request, res: Response, next: Nex
       child.on('close', (code) => code === 0 ? resolve() : reject(new Error(output.slice(-4000) || `yt-dlp exited with code ${code}`)));
     });
 
-    await runYtDlp(formatSelector);
+    try {
+      await runYtDlp(formatSelector, url);
+    } catch (primaryErr) {
+      logger.warn(`Primary yt-dlp format (${formatSelector}) failed: ${String(primaryErr)}. Attempting best fallback format...`);
+      try {
+        await runYtDlp('best', url);
+      } catch (fallbackErr) {
+        logger.warn(`Fallback yt-dlp extraction failed: ${String(fallbackErr)}.`);
+        // If mediaUrl is available or direct CDN link exists, stream directly via Axios
+        const directTargetUrl = mediaUrl && mediaUrl.startsWith('http') ? mediaUrl : null;
+        if (directTargetUrl) {
+          logger.info(`Piping direct stream for ${directTargetUrl}`);
+          const streamResp = await axios.get(directTargetUrl, {
+            responseType: 'stream',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+            timeout: 20000,
+          });
+          const ext = kind === 'audio' ? 'm4a' : kind === 'thumbnail' ? 'jpg' : 'mp4';
+          const filename = `mediaforge_${Date.now()}.${ext}`;
+          res.setHeader('Content-Type', String(streamResp.headers['content-type'] || 'application/octet-stream'));
+          res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+          streamResp.data.pipe(res);
+          return;
+        }
+        throw fallbackErr;
+      }
+    }
+
     const files = await readdir(tempDirectory);
     const downloadedFile = files.find((file) => kind === 'audio'
       ? /\.(mp3|m4a|opus|webm)$/i.test(file)
       : kind === 'thumbnail'
         ? /\.(jpg|jpeg|png|webp)$/i.test(file)
-      : /\.(mp4|mkv|webm)$/i.test(file));
+        : /\.(mp4|mkv|webm)$/i.test(file));
     if (!downloadedFile) throw new Error('yt-dlp did not produce a video file');
 
     const filePath = path.join(tempDirectory, downloadedFile);

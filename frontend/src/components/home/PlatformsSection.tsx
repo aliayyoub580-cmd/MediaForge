@@ -1,88 +1,86 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { useQuery } from '@tanstack/react-query';
-import { CheckCircle } from 'lucide-react';
-import { fetchPlatforms } from '../../lib/api';
+import { CheckCircle2 } from 'lucide-react';
 import { PlatformIcon } from '../download/PlatformIcon';
-import { Card } from '../ui/Card';
 
-interface PlatformData {
-  id: string;
-  name: string;
-  supported?: string[];
-  outputs?: string[];
-  color?: string;
-  icon?: string;
-}
-
-const PLATFORM_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  youtube: { bg: 'bg-red-500/10 dark:bg-red-500/5', border: 'border-red-500/20', text: 'text-red-500' },
-  tiktok: { bg: 'bg-slate-900/10 dark:bg-slate-100/5', border: 'border-slate-700/20', text: 'text-dark-700 dark:text-dark-200' },
-  instagram: { bg: 'bg-pink-500/10 dark:bg-pink-500/5', border: 'border-pink-500/20', text: 'text-pink-500' },
-  facebook: { bg: 'bg-blue-500/10 dark:bg-blue-500/5', border: 'border-blue-500/20', text: 'text-blue-500' },
-};
-
-const staticPlatforms: PlatformData[] = [
-  { id: 'tiktok', name: 'TikTok', supported: ['Videos', 'Slideshows'], outputs: ['No watermark', 'Audio MP3', 'Thumbnail'] },
-  { id: 'instagram', name: 'Instagram', supported: ['Reels', 'Videos'], outputs: ['HD video', 'Audio', 'Thumbnail'] },
-  { id: 'facebook', name: 'Facebook', supported: ['Videos', 'Reels'], outputs: ['HD video', 'Audio', 'Thumbnail'] },
+const platforms = [
+  {
+    id: 'tiktok',
+    name: 'TikTok',
+    desc: 'Download videos, sounds, and slideshows clean without watermarks.',
+    features: ['No-Watermark MP4 Video', 'Extract Audio (MP3)', 'Original HD Quality'],
+    color: 'from-cyan-500/10 to-teal-500/10 border-cyan-500/20 text-cyan-400',
+  },
+  {
+    id: 'instagram',
+    name: 'Instagram',
+    desc: 'Save Reels, video posts, and IGTV videos directly to your device.',
+    features: ['1080p Full HD Video', 'Audio Sound Tracks', 'High Quality Thumbnails'],
+    color: 'from-pink-500/10 to-purple-500/10 border-pink-500/20 text-pink-400',
+  },
+  {
+    id: 'facebook',
+    name: 'Facebook',
+    desc: 'Extract Facebook Reels, public watch clips, and user video posts.',
+    features: ['HD & SD Video Quality', 'Fast Direct Processing', 'Audio MP3 Conversion'],
+    color: 'from-blue-500/10 to-teal-500/10 border-blue-500/20 text-teal-300',
+  },
 ];
 
 export function PlatformsSection() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  const { data: platforms } = useQuery<PlatformData[]>({
-    queryKey: ['platforms'],
-    queryFn: fetchPlatforms,
-    staleTime: Infinity,
-  });
-
-  const items: PlatformData[] = platforms || staticPlatforms;
 
   return (
-    <section ref={ref} className="py-24 section-padding">
+    <section ref={ref} className="py-20 section-padding relative">
       <div className="container-max">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-14"
+          transition={{ duration: 0.3 }}
+          className="text-center mb-12"
         >
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-dark-900 dark:text-white mb-4">
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-teal-50 mb-3">
             Supported <span className="gradient-text">Platforms</span>
           </h2>
-          <p className="text-dark-500 dark:text-dark-400 max-w-xl mx-auto">
-            Works seamlessly with popular social media platforms
+          <p className="text-slate-600 dark:text-teal-100/80 max-w-lg mx-auto text-sm sm:text-base">
+            Easily download content from your favorite social media platforms.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          {items.map((platform: PlatformData, i: number) => {
-            const colors = PLATFORM_COLORS[platform.id] || PLATFORM_COLORS['youtube'];
-            return (
-              <motion.div
-                key={platform.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-              >
-                <Card glass hover className="p-6 h-full">
-                  <div className={`w-12 h-12 rounded-2xl ${colors.bg} border ${colors.border} flex items-center justify-center mb-4`}>
-                    <PlatformIcon platform={platform.id} size={24} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {platforms.map((platform, i) => (
+            <motion.div
+              key={platform.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.3, delay: i * 0.08 }}
+              className="glass-card p-6 flex flex-col justify-between hover:scale-[1.02] transition-all"
+            >
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${platform.color} border flex items-center justify-center`}>
+                    <PlatformIcon platform={platform.id} size={22} />
                   </div>
-                  <h3 className="font-display font-bold text-lg text-dark-900 dark:text-dark-100 mb-1">{platform.name}</h3>
-                  <p className="text-xs text-dark-400 mb-4">{platform.supported?.join(' · ')}</p>
-                  <ul className="space-y-1.5">
-                    {platform.outputs?.map((output: string) => (
-                      <li key={output} className="flex items-center gap-2 text-sm text-dark-600 dark:text-dark-300">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                        {output}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              </motion.div>
-            );
-          })}
+                  <h3 className="font-display font-extrabold text-xl text-slate-900 dark:text-teal-50">
+                    {platform.name}
+                  </h3>
+                </div>
+
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-teal-100/80 mb-5 leading-relaxed">
+                  {platform.desc}
+                </p>
+
+                <ul className="space-y-2.5">
+                  {platform.features.map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 dark:text-teal-100 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>

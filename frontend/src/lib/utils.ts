@@ -38,12 +38,11 @@ export function isValidUrl(url: string): boolean {
 
 export function getPlatformColor(platform: string): string {
   const colors: Record<string, string> = {
-    youtube: '#FF0000',
-    tiktok: '#010101',
+    tiktok: '#00F2FE',
     instagram: '#E1306C',
     facebook: '#1877F2',
   };
-  return colors[platform] || '#6366f1';
+  return colors[platform] || '#14b8a6';
 }
 
 export function formatRelativeTime(date: string | Date): string {
